@@ -143,8 +143,8 @@ where
 /// `TermionBackend`.
 #[derive(Error, Debug)]
 pub enum TermionBackendError {
-    #[error("IO Error: {0}")]
     /// Represents an I/O error.
+    #[error("IO Error: {0}")]
     IoErr(#[from] io::Error),
 }
 

@@ -124,11 +124,11 @@ impl TermwizBackend {
 /// `TermwizBackend`, such as I/O errors or unsupported clear types.
 #[derive(thiserror::Error, Debug)]
 pub enum TermwizBackendError {
-    #[error("IO Error: {0}")]
     /// Represents an I/O error.
+    #[error("IO Error: {0}")]
     IoErr(#[from] io::Error),
-    #[error("Clear type not supported: {0}")]
     /// Represents an error when a specific clear type is not supported.
+    #[error("Clear type not supported: {0}")]
     ClearTypeNotSupported(ClearType),
 }
 

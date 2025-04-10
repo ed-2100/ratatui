@@ -1,8 +1,6 @@
 use alloc::boxed::Box;
 use std::{eprintln, io};
 
-use thiserror::Error;
-
 use crate::backend::{Backend, ClearType};
 use crate::buffer::{Buffer, Cell};
 use crate::layout::{Position, Rect, Size};
@@ -101,13 +99,13 @@ where
     }
 }
 
-///
-#[derive(Error, Debug)]
+/// Represents errors that can occur while interacting with the terminal.
+#[derive(thiserror::Error, Debug)]
 pub enum TerminalError<B: Backend> {
-    ///
+    /// Represents an error that occurred in the backend.
     #[error("Backend error: {0}")]
     BackendError(B::Error),
-    ///
+    /// Represents an error that occurred during a callback.
     #[error("Callback error: {0}")]
     CallbackError(Box<dyn core::error::Error + Send + Sync + 'static>),
 }
