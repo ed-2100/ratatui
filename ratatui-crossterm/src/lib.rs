@@ -59,7 +59,7 @@ use ratatui_core::style::{Color, Modifier, Style};
 /// use ratatui::backend::CrosstermBackend;
 /// use ratatui::Terminal;
 ///
-/// let mut backend = CrosstermBackend::new(stdout());
+/// let backend = CrosstermBackend::new(stdout());
 /// // or
 /// let backend = CrosstermBackend::new(stderr());
 /// let mut terminal = Terminal::new(backend)?;
@@ -74,8 +74,7 @@ use ratatui_core::style::{Color, Modifier, Style};
 ///
 /// stdout().execute(LeaveAlternateScreen)?;
 /// disable_raw_mode()?;
-///
-/// # std::io::Result::Ok(())
+/// # core::result::Result::Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 ///
 /// See the the [Examples] directory for more examples. See the [`backend`] module documentation

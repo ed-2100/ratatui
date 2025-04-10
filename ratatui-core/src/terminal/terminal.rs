@@ -101,10 +101,10 @@ where
 
 /// Represents errors that can occur while interacting with the terminal.
 #[derive(thiserror::Error, Debug)]
-pub enum TerminalError<B: Backend> {
+pub enum TerminalError<B: crate::backend::Error> {
     /// Represents an error that occurred in the backend.
     #[error("Backend error: {0}")]
-    BackendError(B::Error),
+    BackendError(B),
     /// Represents an error that occurred during a callback.
     #[error("Callback error: {0}")]
     CallbackError(Box<dyn core::error::Error + Send + Sync + 'static>),
@@ -127,7 +127,7 @@ where
     /// let terminal = Terminal::new(backend)?;
     /// # std::io::Result::Ok(())
     /// ```
-    pub fn new(backend: B) -> Result<Self, TerminalError<B>> {
+    pub fn new(backend: B) -> Result<Self, TerminalError<B::Error>> {
         Self::with_options(
             backend,
             TerminalOptions {
@@ -153,7 +153,7 @@ where
     pub fn with_options(
         mut backend: B,
         options: TerminalOptions,
-    ) -> Result<Self, TerminalError<B>> {
+    ) -> Result<Self, TerminalError<B::Error>> {
         let area = match options.viewport {
             Viewport::Fullscreen | Viewport::Inline(_) => Rect::from((
                 Position::ORIGIN,
@@ -209,7 +209,7 @@ where
 
     /// Obtains a difference between the previous and the current buffer and passes it to the
     /// current backend for drawing.
-    pub fn flush(&mut self) -> Result<(), TerminalError<B>> {
+    pub fn flush(&mut self) -> Result<(), TerminalError<B::Error>> {
         let previous_buffer = &self.buffers[1 - self.current];
         let current_buffer = &self.buffers[self.current];
         let updates = previous_buffer.diff(current_buffer);
@@ -225,7 +225,7 @@ where
     ///
     /// Requested area will be saved to remain consistent when rendering. This leads to a full clear
     /// of the screen.
-    pub fn resize(&mut self, area: Rect) -> Result<(), TerminalError<B>> {
+    pub fn resize(&mut self, area: Rect) -> Result<(), TerminalError<B::Error>> {
         let next_area = match self.viewport {
             Viewport::Inline(height) => {
                 let offset_in_previous_viewport = self
@@ -256,7 +256,7 @@ where
     }
 
     /// Queries the backend for size and resizes if it doesn't match the previous size.
-    pub fn autoresize(&mut self) -> Result<(), TerminalError<B>> {
+    pub fn autoresize(&mut self) -> Result<(), TerminalError<B::Error>> {
         // fixed viewports do not get autoresized
         if matches!(self.viewport, Viewport::Fullscreen | Viewport::Inline(_)) {
             let area = Rect::from((Position::ORIGIN, self.size()?));
@@ -317,7 +317,7 @@ where
     /// }
     /// # std::io::Result::Ok(())
     /// ```
-    pub fn draw<F>(&mut self, render_callback: F) -> Result<CompletedFrame, TerminalError<B>>
+    pub fn draw<F>(&mut self, render_callback: F) -> Result<CompletedFrame, TerminalError<B::Error>>
     where
         F: FnOnce(&mut Frame),
     {
@@ -392,7 +392,7 @@ where
     /// }
     /// # io::Result::Ok(())
     /// ```
-    pub fn try_draw<F, E>(&mut self, render_callback: F) -> Result<CompletedFrame, TerminalError<B>>
+    pub fn try_draw<F, E>(&mut self, render_callback: F) -> Result<CompletedFrame, TerminalError<B::Error>>
     where
         F: FnOnce(&mut Frame) -> Result<(), E>,
         E: core::error::Error + 'static + Send + Sync,
@@ -441,7 +441,7 @@ where
     }
 
     /// Hides the cursor.
-    pub fn hide_cursor(&mut self) -> Result<(), TerminalError<B>> {
+    pub fn hide_cursor(&mut self) -> Result<(), TerminalError<B::Error>> {
         self.backend
             .hide_cursor()
             .map_err(|e| TerminalError::BackendError(e))?;
@@ -450,7 +450,7 @@ where
     }
 
     /// Shows the cursor.
-    pub fn show_cursor(&mut self) -> Result<(), TerminalError<B>> {
+    pub fn show_cursor(&mut self) -> Result<(), TerminalError<B::Error>> {
         self.backend
             .show_cursor()
             .map_err(|e| TerminalError::BackendError(e))?;
@@ -463,21 +463,21 @@ where
     /// This is the position of the cursor after the last draw call and is returned as a tuple of
     /// `(x, y)` coordinates.
     #[deprecated = "use `get_cursor_position()` instead which returns `Result<Position>`"]
-    pub fn get_cursor(&mut self) -> Result<(u16, u16), TerminalError<B>> {
+    pub fn get_cursor(&mut self) -> Result<(u16, u16), TerminalError<B::Error>> {
         let Position { x, y } = self.get_cursor_position()?;
         Ok((x, y))
     }
 
     /// Sets the cursor position.
     #[deprecated = "use `set_cursor_position((x, y))` instead which takes `impl Into<Position>`"]
-    pub fn set_cursor(&mut self, x: u16, y: u16) -> Result<(), TerminalError<B>> {
+    pub fn set_cursor(&mut self, x: u16, y: u16) -> Result<(), TerminalError<B::Error>> {
         self.set_cursor_position(Position { x, y })
     }
 
     /// Gets the current cursor position.
     ///
     /// This is the position of the cursor after the last draw call.
-    pub fn get_cursor_position(&mut self) -> Result<Position, TerminalError<B>> {
+    pub fn get_cursor_position(&mut self) -> Result<Position, TerminalError<B::Error>> {
         self.backend
             .get_cursor_position()
             .map_err(|e| TerminalError::BackendError(e))
@@ -487,7 +487,7 @@ where
     pub fn set_cursor_position<P: Into<Position>>(
         &mut self,
         position: P,
-    ) -> Result<(), TerminalError<B>> {
+    ) -> Result<(), TerminalError<B::Error>> {
         let position = position.into();
         self.backend
             .set_cursor_position(position)
@@ -497,7 +497,7 @@ where
     }
 
     /// Clear the terminal and force a full redraw on the next draw call.
-    pub fn clear(&mut self) -> Result<(), TerminalError<B>> {
+    pub fn clear(&mut self) -> Result<(), TerminalError<B::Error>> {
         match self.viewport {
             Viewport::Fullscreen => self
                 .backend
@@ -535,7 +535,7 @@ where
     }
 
     /// Queries the real size of the backend.
-    pub fn size(&self) -> Result<Size, TerminalError<B>> {
+    pub fn size(&self) -> Result<Size, TerminalError<B::Error>> {
         self.backend
             .size()
             .map_err(|e| TerminalError::BackendError(e))
@@ -617,7 +617,7 @@ where
     ///     .render(buf.area, buf);
     /// });
     /// ```
-    pub fn insert_before<F>(&mut self, height: u16, draw_fn: F) -> Result<(), TerminalError<B>>
+    pub fn insert_before<F>(&mut self, height: u16, draw_fn: F) -> Result<(), TerminalError<B::Error>>
     where
         F: FnOnce(&mut Buffer),
     {
@@ -636,7 +636,7 @@ where
         &mut self,
         height: u16,
         draw_fn: impl FnOnce(&mut Buffer),
-    ) -> Result<(), TerminalError<B>> {
+    ) -> Result<(), TerminalError<B::Error>> {
         // The approach of this function is to first render all of the lines to insert into a
         // temporary buffer, and then to loop drawing chunks from the buffer to the screen. drawing
         // this buffer onto the screen.
@@ -814,7 +814,7 @@ where
         y_offset: u16,
         lines_to_draw: u16,
         cells: &'a [Cell],
-    ) -> Result<&'a [Cell], TerminalError<B>> {
+    ) -> Result<&'a [Cell], TerminalError<B::Error>> {
         let width: usize = self.last_known_area.width.into();
         let (to_draw, remainder) = cells.split_at(width * lines_to_draw as usize);
         if lines_to_draw > 0 {
@@ -863,7 +863,7 @@ where
 
     /// Scroll the whole screen up by the given number of lines.
     #[cfg(not(feature = "scrolling-regions"))]
-    fn scroll_up(&mut self, lines_to_scroll: u16) -> Result<(), TerminalError<B>> {
+    fn scroll_up(&mut self, lines_to_scroll: u16) -> Result<(), TerminalError<B::Error>> {
         if lines_to_scroll > 0 {
             self.set_cursor_position(Position::new(
                 0,
@@ -882,7 +882,7 @@ fn compute_inline_size<B: Backend>(
     height: u16,
     size: Size,
     offset_in_previous_viewport: u16,
-) -> Result<(Rect, Position), TerminalError<B>> {
+) -> Result<(Rect, Position), TerminalError<B::Error>> {
     let pos = backend
         .get_cursor_position()
         .map_err(|e| TerminalError::BackendError(e))?;

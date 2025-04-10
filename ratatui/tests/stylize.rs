@@ -4,7 +4,7 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::widgets::{BarChart, Block, Paragraph};
 use ratatui::Terminal;
-use ratatui_core::terminal::TerminalError;
+use ratatui_core::{backend::Backend, terminal::TerminalError};
 
 #[test]
 fn barchart_can_be_stylized() {
@@ -56,7 +56,7 @@ fn barchart_can_be_stylized() {
 }
 
 #[test]
-fn block_can_be_stylized() -> Result<(), TerminalError<TestBackend>> {
+fn block_can_be_stylized() -> Result<(), TerminalError<<TestBackend as Backend>::Error>> {
     let block = Block::bordered()
         .title("Title".light_blue())
         .on_cyan()
@@ -88,7 +88,7 @@ fn block_can_be_stylized() -> Result<(), TerminalError<TestBackend>> {
 }
 
 #[test]
-fn paragraph_can_be_stylized() -> Result<(), TerminalError<TestBackend>> {
+fn paragraph_can_be_stylized() -> Result<(), TerminalError<<TestBackend as Backend>::Error>> {
     let paragraph = Paragraph::new("Text".cyan());
 
     let area = Rect::new(0, 0, 10, 1);

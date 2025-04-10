@@ -135,10 +135,12 @@
 //! The closure passed to the [`Terminal::draw`] method should handle the rendering of a full frame.
 //!
 //! ```rust,no_run
+//! use core::error::Error;
+//! 
 //! use ratatui::widgets::Paragraph;
 //! use ratatui::Frame;
 //!
-//! fn run(terminal: &mut ratatui::DefaultTerminal) -> std::io::Result<()> {
+//! fn run(terminal: &mut ratatui::DefaultTerminal) -> Result<(), Box<dyn Error>> {
 //!     loop {
 //!         terminal.draw(|frame| draw(frame))?;
 //!         if handle_events()? {
@@ -341,9 +343,7 @@ pub use ratatui_termion::termion;
 pub use ratatui_termwiz::termwiz;
 
 #[cfg(feature = "crossterm")]
-pub use crate::init::{
-    init, init_with_options, restore, try_init, try_init_with_options, try_restore, DefaultTerminal,
-};
+pub use crate::init::*;
 
 /// Re-exports for the backend implementations.
 pub mod backend {

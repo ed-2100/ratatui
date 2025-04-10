@@ -1,5 +1,6 @@
 use std::io::{self, stdout, Stdout};
 
+use ratatui_core::backend::Backend;
 use ratatui_core::terminal::{Terminal, TerminalError, TerminalOptions};
 use ratatui_crossterm::crossterm::execute;
 use ratatui_crossterm::crossterm::terminal::{
@@ -7,14 +8,20 @@ use ratatui_crossterm::crossterm::terminal::{
 };
 use ratatui_crossterm::CrosstermBackend;
 
+/// Represents errors that can occur during terminal initialization.
 #[derive(thiserror::Error, Debug)]
 pub enum InitializationError {
+    /// Represents an error that occurs in the terminal backend.
     #[error("Terminal Error: {0}")]
-    TerminalErr(#[from] TerminalError<DefaultBackend>),
+    TerminalErr(#[from] TerminalError<<DefaultBackend as Backend>::Error>),
+    /// Represents an IO error that occurs during terminal initialization.
     #[error("IO Error: {0}")]
     IoErr(#[from] io::Error),
 }
 
+/// A type alias for the default backend used by the terminal.
+///
+/// This backend uses [`CrosstermBackend`] with [`Stdout`] as the output stream.
 pub type DefaultBackend = CrosstermBackend<Stdout>;
 
 /// A type alias for the default terminal type.
@@ -85,7 +92,7 @@ pub fn init() -> DefaultTerminal {
 ///
 /// ```no_run
 /// let terminal = ratatui::try_init()?;
-/// # Ok::<(), std::io::Error>(())
+/// # Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 pub fn try_init() -> Result<DefaultTerminal, InitializationError> {
     set_panic_hook();
@@ -174,7 +181,7 @@ pub fn init_with_options(options: TerminalOptions) -> DefaultTerminal {
 ///     viewport: Viewport::Inline(5),
 /// };
 /// let terminal = ratatui::try_init_with_options(options)?;
-/// # Ok::<(), std::io::Error>(())
+/// # Ok::<(), ratatui::InitializationError>(())
 /// ```
 pub fn try_init_with_options(
     options: TerminalOptions,

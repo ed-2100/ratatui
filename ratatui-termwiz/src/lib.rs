@@ -56,7 +56,7 @@ use termwiz::terminal::{ScreenSize, SystemTerminal, Terminal};
 /// terminal.draw(|frame| {
 ///     // -- snip --
 /// })?;
-/// # std::result::Result::Ok::<(), Box<dyn std::error::Error>>(())
+/// # core::result::Result::Ok::<(), Box<dyn core::error::Error>>(())
 /// ```
 ///
 /// See the the [Examples] directory for more examples. See the [`backend`] module documentation
