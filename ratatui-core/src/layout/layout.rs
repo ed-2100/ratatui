@@ -1,7 +1,8 @@
-use alloc::rc::Rc;
+use alloc::{format, rc::Rc, vec::Vec};
 use core::cell::RefCell;
 use core::iter;
 use core::num::NonZeroUsize;
+use std::{dbg, thread_local};
 
 use hashbrown::HashMap;
 use itertools::Itertools;
@@ -1172,6 +1173,8 @@ mod strengths {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{borrow::ToOwned, vec};
+
     use super::*;
 
     #[test]
@@ -1403,6 +1406,7 @@ mod tests {
     /// - underflow: constraint is for less than the full space
     /// - overflow: constraint is for more than the full space
     mod split {
+        use alloc::string::ToString;
         use core::ops::Range;
 
         use itertools::Itertools;
@@ -1414,6 +1418,8 @@ mod tests {
         use crate::layout::{Direction, Flex, Layout, Rect};
         use crate::text::Text;
         use crate::widgets::Widget;
+
+        use super::*;
 
         /// Test that the given constraints applied to the given area result in the expected layout.
         /// Each chunk is filled with a letter repeated as many times as the width of the chunk. The

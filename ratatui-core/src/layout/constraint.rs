@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use core::fmt;
 
 use strum::EnumIs;
@@ -382,6 +383,8 @@ impl fmt::Display for Constraint {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{string::ToString, vec};
+
     use super::*;
 
     #[test]

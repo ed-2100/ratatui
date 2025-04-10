@@ -1,3 +1,4 @@
+use alloc::string::String;
 use core::fmt;
 
 use crate::style::{Color, Modifier, Style};
@@ -323,6 +324,8 @@ impl Styled for String {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, string::ToString};
+
     use itertools::Itertools;
     use rstest::rstest;
 

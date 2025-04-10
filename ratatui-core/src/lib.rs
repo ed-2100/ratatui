@@ -42,6 +42,10 @@
 #![warn(clippy::std_instead_of_alloc)]
 #![warn(clippy::alloc_instead_of_core)]
 
+#![no_std]
+
+extern crate std;
+
 extern crate alloc;
 
 pub mod backend;

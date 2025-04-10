@@ -1,5 +1,10 @@
 #![warn(missing_docs)]
-use alloc::borrow::Cow;
+use alloc::{
+    borrow::{Cow, ToOwned},
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 use core::fmt;
 
 use crate::buffer::Buffer;
@@ -743,6 +748,7 @@ impl Styled for Text<'_> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
     use core::iter;
 
     use rstest::{fixture, rstest};

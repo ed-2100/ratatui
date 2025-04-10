@@ -1,6 +1,11 @@
 #![deny(missing_docs)]
 #![warn(clippy::pedantic, clippy::nursery, clippy::arithmetic_side_effects)]
-use alloc::borrow::Cow;
+use alloc::{
+    borrow::Cow,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 use core::fmt;
 
 use unicode_truncate::UnicodeTruncateStr;
@@ -831,6 +836,7 @@ impl Styled for Line<'_> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
     use core::iter;
 
     use rstest::{fixture, rstest};
@@ -1181,6 +1187,7 @@ mod tests {
     }
 
     mod widget {
+        use std::dbg;
         use unicode_segmentation::UnicodeSegmentation;
         use unicode_width::UnicodeWidthStr;
 

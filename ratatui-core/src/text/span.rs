@@ -1,4 +1,5 @@
-use alloc::borrow::Cow;
+use alloc::{borrow::Cow, string::ToString};
+
 use core::fmt;
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -494,6 +495,8 @@ impl fmt::Display for Span<'_> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, string::String, vec};
+
     use rstest::{fixture, rstest};
 
     use super::*;
@@ -671,6 +674,7 @@ mod tests {
     }
 
     mod widget {
+
         use rstest::rstest;
 
         use super::*;

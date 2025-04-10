@@ -505,6 +505,7 @@ impl From<(u8, u8, u8, u8)> for Color {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{boxed::Box, format};
     use core::error::Error;
 
     #[cfg(feature = "palette")]
