@@ -100,7 +100,6 @@
 //! [Examples]: https://github.com/ratatui/ratatui/tree/main/ratatui/examples/README.md
 //! [Backend Comparison]: https://ratatui.rs/concepts/backends/comparison/
 //! [Ratatui Website]: https://ratatui.rs
-use core::ops;
 use std::io;
 
 use strum::{Display, EnumString};

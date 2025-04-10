@@ -2,7 +2,7 @@
 //! It is used in the integration tests to verify the correctness of the library.
 
 use core::fmt::{self, Write};
-use core::{iter, ops};
+use core::iter;
 use std::io;
 
 use unicode_width::UnicodeWidthStr;
