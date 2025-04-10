@@ -153,11 +153,27 @@ where
     }
 }
 
+/// An error type for handling issues that arise in the `CrosstermBackend`.
+#[derive(thiserror::Error, Debug)]
+pub enum CrosstermBackendError {
+    /// Represents an I/O error.
+    #[error("IO Error: {0}")]
+    IoErr(#[from] io::Error),
+}
+
+impl ratatui_core::backend::Error for CrosstermBackendError {
+    fn kind(&self) -> ratatui_core::backend::ErrorKind {
+        todo!()
+    }
+}
+
 impl<W> Backend for CrosstermBackend<W>
 where
-    W: Write,
+    W: Write + std::fmt::Debug,
 {
-    fn draw<'a, I>(&mut self, content: I) -> io::Result<()>
+    type Error = CrosstermBackendError;
+
+    fn draw<'a, I>(&mut self, content: I) -> Result<(), CrosstermBackendError>
     where
         I: Iterator<Item = (u16, u16, &'a Cell)>,
     {
@@ -203,46 +219,53 @@ where
         }
 
         #[cfg(feature = "underline-color")]
-        return queue!(
+        queue!(
             self.writer,
             SetForegroundColor(CrosstermColor::Reset),
             SetBackgroundColor(CrosstermColor::Reset),
             SetUnderlineColor(CrosstermColor::Reset),
             SetAttribute(CrosstermAttribute::Reset),
-        );
+        )?;
         #[cfg(not(feature = "underline-color"))]
-        return queue!(
+        queue!(
             self.writer,
             SetForegroundColor(CrosstermColor::Reset),
             SetBackgroundColor(CrosstermColor::Reset),
             SetAttribute(CrosstermAttribute::Reset),
-        );
+        )?;
+        Ok(())
     }
 
-    fn hide_cursor(&mut self) -> io::Result<()> {
-        execute!(self.writer, Hide)
+    fn hide_cursor(&mut self) -> Result<(), CrosstermBackendError> {
+        execute!(self.writer, Hide)?;
+        Ok(())
     }
 
-    fn show_cursor(&mut self) -> io::Result<()> {
-        execute!(self.writer, Show)
+    fn show_cursor(&mut self) -> Result<(), CrosstermBackendError> {
+        execute!(self.writer, Show)?;
+        Ok(())
     }
 
-    fn get_cursor_position(&mut self) -> io::Result<Position> {
-        crossterm::cursor::position()
+    fn get_cursor_position(&mut self) -> Result<Position, CrosstermBackendError> {
+        Ok(crossterm::cursor::position()
             .map(|(x, y)| Position { x, y })
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?)
     }
 
-    fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> io::Result<()> {
+    fn set_cursor_position<P: Into<Position>>(
+        &mut self,
+        position: P,
+    ) -> Result<(), CrosstermBackendError> {
         let Position { x, y } = position.into();
-        execute!(self.writer, MoveTo(x, y))
+        execute!(self.writer, MoveTo(x, y))?;
+        Ok(())
     }
 
-    fn clear(&mut self) -> io::Result<()> {
+    fn clear(&mut self) -> Result<(), CrosstermBackendError> {
         self.clear_region(ClearType::All)
     }
 
-    fn clear_region(&mut self, clear_type: ClearType) -> io::Result<()> {
+    fn clear_region(&mut self, clear_type: ClearType) -> Result<(), CrosstermBackendError> {
         execute!(
             self.writer,
             Clear(match clear_type {
@@ -252,22 +275,24 @@ where
                 ClearType::CurrentLine => crossterm::terminal::ClearType::CurrentLine,
                 ClearType::UntilNewLine => crossterm::terminal::ClearType::UntilNewLine,
             })
-        )
+        )?;
+        Ok(())
     }
 
-    fn append_lines(&mut self, n: u16) -> io::Result<()> {
+    fn append_lines(&mut self, n: u16) -> Result<(), CrosstermBackendError> {
         for _ in 0..n {
             queue!(self.writer, Print("\n"))?;
         }
-        self.writer.flush()
+        self.writer.flush()?;
+        Ok(())
     }
 
-    fn size(&self) -> io::Result<Size> {
+    fn size(&self) -> Result<Size, CrosstermBackendError> {
         let (width, height) = terminal::size()?;
         Ok(Size { width, height })
     }
 
-    fn window_size(&mut self) -> io::Result<WindowSize> {
+    fn window_size(&mut self) -> Result<WindowSize, CrosstermBackendError> {
         let crossterm::terminal::WindowSize {
             columns,
             rows,
@@ -283,12 +308,17 @@ where
         })
     }
 
-    fn flush(&mut self) -> io::Result<()> {
-        self.writer.flush()
+    fn flush(&mut self) -> Result<(), CrosstermBackendError> {
+        self.writer.flush()?;
+        Ok(())
     }
 
     #[cfg(feature = "scrolling-regions")]
-    fn scroll_region_up(&mut self, region: std::ops::Range<u16>, amount: u16) -> io::Result<()> {
+    fn scroll_region_up(
+        &mut self,
+        region: std::ops::Range<u16>,
+        amount: u16,
+    ) -> Result<(), CrosstermBackendError> {
         queue!(
             self.writer,
             ScrollUpInRegion {
@@ -297,11 +327,16 @@ where
                 lines_to_scroll: amount,
             }
         )?;
-        self.writer.flush()
+        self.writer.flush()?;
+        Ok(())
     }
 
     #[cfg(feature = "scrolling-regions")]
-    fn scroll_region_down(&mut self, region: std::ops::Range<u16>, amount: u16) -> io::Result<()> {
+    fn scroll_region_down(
+        &mut self,
+        region: std::ops::Range<u16>,
+        amount: u16,
+    ) -> Result<(), CrosstermBackendError> {
         queue!(
             self.writer,
             ScrollDownInRegion {
@@ -310,7 +345,8 @@ where
                 lines_to_scroll: amount,
             }
         )?;
-        self.writer.flush()
+        self.writer.flush()?;
+        Ok(())
     }
 }
 

@@ -43,11 +43,11 @@ pub fn run(tick_rate: Duration, enhanced_graphics: bool) -> Result<(), Box<dyn E
     Ok(())
 }
 
-fn run_app<B: Backend>(
+fn run_app<B: Backend + std::fmt::Debug + 'static>(
     terminal: &mut Terminal<B>,
     mut app: App,
     tick_rate: Duration,
-) -> io::Result<()> {
+) -> Result<(), Box<dyn Error>> {
     let mut last_tick = Instant::now();
     loop {
         terminal.draw(|frame| ui::draw(frame, &mut app))?;

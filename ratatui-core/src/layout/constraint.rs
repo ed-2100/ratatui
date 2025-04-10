@@ -383,7 +383,8 @@ impl fmt::Display for Constraint {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{string::ToString, vec};
+    use alloc::string::ToString;
+    use alloc::vec;
 
     use super::*;
 

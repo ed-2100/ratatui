@@ -1,18 +1,28 @@
 use std::io::{self, stdout, Stdout};
 
-use ratatui_core::terminal::{Terminal, TerminalOptions};
+use ratatui_core::terminal::{Terminal, TerminalError, TerminalOptions};
 use ratatui_crossterm::crossterm::execute;
 use ratatui_crossterm::crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use ratatui_crossterm::CrosstermBackend;
 
+#[derive(thiserror::Error, Debug)]
+pub enum InitializationError {
+    #[error("Terminal Error: {0}")]
+    TerminalErr(#[from] TerminalError<DefaultBackend>),
+    #[error("IO Error: {0}")]
+    IoErr(#[from] io::Error),
+}
+
+pub type DefaultBackend = CrosstermBackend<Stdout>;
+
 /// A type alias for the default terminal type.
 ///
 /// This is a [`Terminal`] using the [`CrosstermBackend`] which writes to [`Stdout`]. This is a
 /// reasonable default for most applications. To use a different backend or output stream, instead
 /// use [`Terminal`] and a [backend][`crate::backend`] of your choice directly.
-pub type DefaultTerminal = Terminal<CrosstermBackend<Stdout>>;
+pub type DefaultTerminal = Terminal<DefaultBackend>;
 
 /// Initialize a terminal with reasonable defaults for most applications.
 ///
@@ -77,12 +87,12 @@ pub fn init() -> DefaultTerminal {
 /// let terminal = ratatui::try_init()?;
 /// # Ok::<(), std::io::Error>(())
 /// ```
-pub fn try_init() -> io::Result<DefaultTerminal> {
+pub fn try_init() -> Result<DefaultTerminal, InitializationError> {
     set_panic_hook();
     enable_raw_mode()?;
     execute!(stdout(), EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout());
-    Terminal::new(backend)
+    Ok(Terminal::new(backend)?)
 }
 
 /// Initialize a terminal with the given options and reasonable defaults.
@@ -166,11 +176,13 @@ pub fn init_with_options(options: TerminalOptions) -> DefaultTerminal {
 /// let terminal = ratatui::try_init_with_options(options)?;
 /// # Ok::<(), std::io::Error>(())
 /// ```
-pub fn try_init_with_options(options: TerminalOptions) -> io::Result<DefaultTerminal> {
+pub fn try_init_with_options(
+    options: TerminalOptions,
+) -> Result<DefaultTerminal, InitializationError> {
     set_panic_hook();
     enable_raw_mode()?;
     let backend = CrosstermBackend::new(stdout());
-    Terminal::with_options(backend, options)
+    Ok(Terminal::with_options(backend, options)?)
 }
 
 /// Restores the terminal to its original state.

@@ -2577,6 +2577,7 @@ dependencies = [
  "rstest",
  "serde",
  "serde_json",
+ "thiserror 2.0.12",
  "time",
  "tokio",
  "tracing 0.1.41",
@@ -2619,6 +2620,7 @@ dependencies = [
  "ratatui",
  "ratatui-core",
  "rstest",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2639,6 +2641,7 @@ dependencies = [
  "ratatui-core",
  "rstest",
  "termion",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -2650,6 +2653,7 @@ dependencies = [
  "ratatui-core",
  "rstest",
  "termwiz",
+ "thiserror 2.0.12",
 ]
 
 [[package]]

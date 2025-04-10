@@ -36,5 +36,5 @@ mod terminal;
 mod viewport;
 
 pub use frame::{CompletedFrame, Frame};
-pub use terminal::{Options as TerminalOptions, Terminal};
+pub use terminal::{Options as TerminalOptions, Terminal, TerminalError};
 pub use viewport::Viewport;

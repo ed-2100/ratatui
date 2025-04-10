@@ -17,7 +17,7 @@
 use std::error::Error;
 use std::io;
 
-use ratatui_core::backend::{Backend, WindowSize};
+use ratatui_core::backend::{Backend, ClearType, WindowSize};
 use ratatui_core::buffer::Cell;
 use ratatui_core::layout::{Position, Size};
 use ratatui_core::style::{Color, Modifier, Style};
@@ -118,8 +118,35 @@ impl TermwizBackend {
     }
 }
 
+/// Represents errors that can occur in the `TermwizBackend`.
+///
+/// This enum encapsulates different types of errors that may arise while using the
+/// `TermwizBackend`, such as I/O errors or unsupported clear types.
+#[derive(thiserror::Error, Debug)]
+pub enum TermwizBackendError {
+    #[error("IO Error: {0}")]
+    /// Represents an I/O error.
+    IoErr(#[from] io::Error),
+    #[error("Clear type not supported: {0}")]
+    /// Represents an error when a specific clear type is not supported.
+    ClearTypeNotSupported(ClearType),
+}
+
+impl ratatui_core::backend::Error for TermwizBackendError {
+    fn kind(&self) -> ratatui_core::backend::ErrorKind {
+        match self {
+            Self::IoErr(_) => ratatui_core::backend::ErrorKind::Other,
+            Self::ClearTypeNotSupported(_) => {
+                ratatui_core::backend::ErrorKind::ClearTypeNotSupported
+            }
+        }
+    }
+}
+
 impl Backend for TermwizBackend {
-    fn draw<'a, I>(&mut self, content: I) -> io::Result<()>
+    type Error = TermwizBackendError;
+
+    fn draw<'a, I>(&mut self, content: I) -> Result<(), TermwizBackendError>
     where
         I: Iterator<Item = (u16, u16, &'a Cell)>,
     {
@@ -189,24 +216,27 @@ impl Backend for TermwizBackend {
         Ok(())
     }
 
-    fn hide_cursor(&mut self) -> io::Result<()> {
+    fn hide_cursor(&mut self) -> Result<(), TermwizBackendError> {
         self.buffered_terminal
             .add_change(Change::CursorVisibility(CursorVisibility::Hidden));
         Ok(())
     }
 
-    fn show_cursor(&mut self) -> io::Result<()> {
+    fn show_cursor(&mut self) -> Result<(), TermwizBackendError> {
         self.buffered_terminal
             .add_change(Change::CursorVisibility(CursorVisibility::Visible));
         Ok(())
     }
 
-    fn get_cursor_position(&mut self) -> io::Result<Position> {
+    fn get_cursor_position(&mut self) -> Result<Position, TermwizBackendError> {
         let (x, y) = self.buffered_terminal.cursor_position();
         Ok(Position::new(x as u16, y as u16))
     }
 
-    fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> io::Result<()> {
+    fn set_cursor_position<P: Into<Position>>(
+        &mut self,
+        position: P,
+    ) -> Result<(), TermwizBackendError> {
         let Position { x, y } = position.into();
         self.buffered_terminal.add_change(Change::CursorPosition {
             x: TermwizPosition::Absolute(x as usize),
@@ -216,18 +246,12 @@ impl Backend for TermwizBackend {
         Ok(())
     }
 
-    fn clear(&mut self) -> io::Result<()> {
-        self.buffered_terminal
-            .add_change(Change::ClearScreen(termwiz::color::ColorAttribute::Default));
-        Ok(())
-    }
-
-    fn size(&self) -> io::Result<Size> {
+    fn size(&self) -> Result<Size, TermwizBackendError> {
         let (cols, rows) = self.buffered_terminal.dimensions();
         Ok(Size::new(u16_max(cols), u16_max(rows)))
     }
 
-    fn window_size(&mut self) -> io::Result<WindowSize> {
+    fn window_size(&mut self) -> Result<WindowSize, TermwizBackendError> {
         let ScreenSize {
             cols,
             rows,
@@ -250,7 +274,7 @@ impl Backend for TermwizBackend {
         })
     }
 
-    fn flush(&mut self) -> io::Result<()> {
+    fn flush(&mut self) -> Result<(), TermwizBackendError> {
         self.buffered_terminal
             .flush()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
@@ -258,7 +282,11 @@ impl Backend for TermwizBackend {
     }
 
     #[cfg(feature = "scrolling-regions")]
-    fn scroll_region_up(&mut self, region: std::ops::Range<u16>, amount: u16) -> io::Result<()> {
+    fn scroll_region_up(
+        &mut self,
+        region: std::ops::Range<u16>,
+        amount: u16,
+    ) -> Result<(), TermwizBackendError> {
         // termwiz doesn't have a command to just set the scrolling region. Instead, setting the
         // scrolling region and scrolling are combined. However, this has the side-effect of
         // leaving the scrolling region set. To reset the scrolling region, termwiz advises one to
@@ -281,7 +309,11 @@ impl Backend for TermwizBackend {
     }
 
     #[cfg(feature = "scrolling-regions")]
-    fn scroll_region_down(&mut self, region: std::ops::Range<u16>, amount: u16) -> io::Result<()> {
+    fn scroll_region_down(
+        &mut self,
+        region: std::ops::Range<u16>,
+        amount: u16,
+    ) -> Result<(), TermwizBackendError> {
         // termwiz doesn't have a command to just set the scrolling region. Instead, setting the
         // scrolling region and scrolling are combined. However, this has the side-effect of
         // leaving the scrolling region set. To reset the scrolling region, termwiz advises one to
@@ -301,6 +333,22 @@ impl Backend for TermwizBackend {
             },
         ]);
         Ok(())
+    }
+
+    fn clear_region(&mut self, clear_type: ClearType) -> Result<(), TermwizBackendError> {
+        match clear_type {
+            ClearType::All => {
+                self.buffered_terminal
+                    .add_change(Change::ClearScreen(termwiz::color::ColorAttribute::Default));
+                Ok(())
+            }
+            ClearType::AfterCursor
+            | ClearType::BeforeCursor
+            | ClearType::CurrentLine
+            | ClearType::UntilNewLine => {
+                Err(TermwizBackendError::ClearTypeNotSupported(clear_type))
+            }
+        }
     }
 }
 

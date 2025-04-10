@@ -167,7 +167,8 @@ pub const HEAVY_QUADRUPLE_DASHED: Set = Set {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::String};
+    use alloc::format;
+    use alloc::string::String;
 
     use indoc::{formatdoc, indoc};
 

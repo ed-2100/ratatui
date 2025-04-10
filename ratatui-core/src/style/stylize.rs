@@ -324,7 +324,8 @@ impl Styled for String {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::ToString};
+    use alloc::format;
+    use alloc::string::ToString;
 
     use itertools::Itertools;
     use rstest::rstest;

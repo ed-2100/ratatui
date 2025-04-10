@@ -1,4 +1,6 @@
-use alloc::{format, rc::Rc, vec::Vec};
+use alloc::format;
+use alloc::rc::Rc;
+use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::iter;
 use core::num::NonZeroUsize;
@@ -1173,7 +1175,8 @@ mod strengths {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{borrow::ToOwned, vec};
+    use alloc::borrow::ToOwned;
+    use alloc::vec;
 
     use super::*;
 
@@ -1413,13 +1416,12 @@ mod tests {
         use pretty_assertions::assert_eq;
         use rstest::rstest;
 
+        use super::*;
         use crate::buffer::Buffer;
         use crate::layout::Constraint::{self, *};
         use crate::layout::{Direction, Flex, Layout, Rect};
         use crate::text::Text;
         use crate::widgets::Widget;
-
-        use super::*;
 
         /// Test that the given constraints applied to the given area result in the expected layout.
         /// Each chunk is filled with a letter repeated as many times as the width of the chunk. The

@@ -1,5 +1,10 @@
 #![allow(clippy::unreadable_literal)]
 
+#[cfg(feature = "serde")]
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 use core::fmt;
 use core::str::FromStr;
 
@@ -505,7 +510,8 @@ impl From<(u8, u8, u8, u8)> for Color {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{boxed::Box, format};
+    use alloc::boxed::Box;
+    use alloc::format;
     use core::error::Error;
 
     #[cfg(feature = "palette")]

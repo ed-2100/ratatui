@@ -158,12 +158,15 @@ fn downloads() -> Downloads {
 }
 
 #[allow(clippy::needless_pass_by_value)]
-fn run(
-    terminal: &mut Terminal<impl Backend>,
+fn run<B: Backend + core::fmt::Debug + 'static>(
+    terminal: &mut Terminal<B>,
     workers: Vec<Worker>,
     mut downloads: Downloads,
     rx: mpsc::Receiver<Event>,
-) -> Result<()> {
+) -> Result<()>
+where
+    <B as Backend>::Error: Send + Sync,
+{
     let mut redraw = true;
     loop {
         if redraw {

@@ -111,6 +111,7 @@ ratatui-termwiz = { workspace = true, optional = true }
 ratatui-widgets = { workspace = true }
 serde = { workspace = true, optional = true }
 time = { version = "0.3.39", optional = true, features = ["local-offset"] }
+thiserror = "2"
 
 [target.'cfg(not(windows))'.dependencies]
 ratatui-termion = { workspace = true, optional = true }

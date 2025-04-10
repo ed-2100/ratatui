@@ -1,4 +1,7 @@
+use alloc::boxed::Box;
 use std::{eprintln, io};
+
+use thiserror::Error;
 
 use crate::backend::{Backend, ClearType};
 use crate::buffer::{Buffer, Cell};
@@ -98,6 +101,17 @@ where
     }
 }
 
+///
+#[derive(Error, Debug)]
+pub enum TerminalError<B: Backend> {
+    ///
+    #[error("Backend error: {0}")]
+    BackendError(B::Error),
+    ///
+    #[error("Callback error: {0}")]
+    CallbackError(Box<dyn core::error::Error + Send + Sync + 'static>),
+}
+
 impl<B> Terminal<B>
 where
     B: Backend,
@@ -115,7 +129,7 @@ where
     /// let terminal = Terminal::new(backend)?;
     /// # std::io::Result::Ok(())
     /// ```
-    pub fn new(backend: B) -> io::Result<Self> {
+    pub fn new(backend: B) -> Result<Self, TerminalError<B>> {
         Self::with_options(
             backend,
             TerminalOptions {
@@ -138,11 +152,15 @@ where
     /// let terminal = Terminal::with_options(backend, TerminalOptions { viewport })?;
     /// # std::io::Result::Ok(())
     /// ```
-    pub fn with_options(mut backend: B, options: TerminalOptions) -> io::Result<Self> {
+    pub fn with_options(
+        mut backend: B,
+        options: TerminalOptions,
+    ) -> Result<Self, TerminalError<B>> {
         let area = match options.viewport {
-            Viewport::Fullscreen | Viewport::Inline(_) => {
-                Rect::from((Position::ORIGIN, backend.size()?))
-            }
+            Viewport::Fullscreen | Viewport::Inline(_) => Rect::from((
+                Position::ORIGIN,
+                backend.size().map_err(|e| TerminalError::BackendError(e))?,
+            )),
             Viewport::Fixed(area) => area,
         };
         let (viewport_area, cursor_pos) = match options.viewport {
@@ -193,21 +211,23 @@ where
 
     /// Obtains a difference between the previous and the current buffer and passes it to the
     /// current backend for drawing.
-    pub fn flush(&mut self) -> io::Result<()> {
+    pub fn flush(&mut self) -> Result<(), TerminalError<B>> {
         let previous_buffer = &self.buffers[1 - self.current];
         let current_buffer = &self.buffers[self.current];
         let updates = previous_buffer.diff(current_buffer);
         if let Some((col, row, _)) = updates.last() {
             self.last_known_cursor_pos = Position { x: *col, y: *row };
         }
-        self.backend.draw(updates.into_iter())
+        self.backend
+            .draw(updates.into_iter())
+            .map_err(|e| TerminalError::BackendError(e))
     }
 
     /// Updates the Terminal so that internal buffers match the requested area.
     ///
     /// Requested area will be saved to remain consistent when rendering. This leads to a full clear
     /// of the screen.
-    pub fn resize(&mut self, area: Rect) -> io::Result<()> {
+    pub fn resize(&mut self, area: Rect) -> Result<(), TerminalError<B>> {
         let next_area = match self.viewport {
             Viewport::Inline(height) => {
                 let offset_in_previous_viewport = self
@@ -238,7 +258,7 @@ where
     }
 
     /// Queries the backend for size and resizes if it doesn't match the previous size.
-    pub fn autoresize(&mut self) -> io::Result<()> {
+    pub fn autoresize(&mut self) -> Result<(), TerminalError<B>> {
         // fixed viewports do not get autoresized
         if matches!(self.viewport, Viewport::Fullscreen | Viewport::Inline(_)) {
             let area = Rect::from((Position::ORIGIN, self.size()?));
@@ -299,7 +319,7 @@ where
     /// }
     /// # std::io::Result::Ok(())
     /// ```
-    pub fn draw<F>(&mut self, render_callback: F) -> io::Result<CompletedFrame>
+    pub fn draw<F>(&mut self, render_callback: F) -> Result<CompletedFrame, TerminalError<B>>
     where
         F: FnOnce(&mut Frame),
     {
@@ -374,10 +394,10 @@ where
     /// }
     /// # io::Result::Ok(())
     /// ```
-    pub fn try_draw<F, E>(&mut self, render_callback: F) -> io::Result<CompletedFrame>
+    pub fn try_draw<F, E>(&mut self, render_callback: F) -> Result<CompletedFrame, TerminalError<B>>
     where
         F: FnOnce(&mut Frame) -> Result<(), E>,
-        E: Into<io::Error>,
+        E: core::error::Error + 'static + Send + Sync,
     {
         // Autoresize - otherwise we get glitches if shrinking or potential desync between widgets
         // and the terminal (if growing), which may OOB.
@@ -385,7 +405,7 @@ where
 
         let mut frame = self.get_frame();
 
-        render_callback(&mut frame).map_err(Into::into)?;
+        render_callback(&mut frame).map_err(|e| TerminalError::CallbackError(Box::new(e)))?;
 
         // We can't change the cursor position right away because we have to flush the frame to
         // stdout first. But we also can't keep the frame around, since it holds a &mut to
@@ -406,7 +426,9 @@ where
         self.swap_buffers();
 
         // Flush
-        self.backend.flush()?;
+        self.backend
+            .flush()
+            .map_err(|e| TerminalError::BackendError(e))?;
 
         let completed_frame = CompletedFrame {
             buffer: &self.buffers[1 - self.current],
@@ -421,15 +443,19 @@ where
     }
 
     /// Hides the cursor.
-    pub fn hide_cursor(&mut self) -> io::Result<()> {
-        self.backend.hide_cursor()?;
+    pub fn hide_cursor(&mut self) -> Result<(), TerminalError<B>> {
+        self.backend
+            .hide_cursor()
+            .map_err(|e| TerminalError::BackendError(e))?;
         self.hidden_cursor = true;
         Ok(())
     }
 
     /// Shows the cursor.
-    pub fn show_cursor(&mut self) -> io::Result<()> {
-        self.backend.show_cursor()?;
+    pub fn show_cursor(&mut self) -> Result<(), TerminalError<B>> {
+        self.backend
+            .show_cursor()
+            .map_err(|e| TerminalError::BackendError(e))?;
         self.hidden_cursor = false;
         Ok(())
     }
@@ -439,46 +465,63 @@ where
     /// This is the position of the cursor after the last draw call and is returned as a tuple of
     /// `(x, y)` coordinates.
     #[deprecated = "use `get_cursor_position()` instead which returns `Result<Position>`"]
-    pub fn get_cursor(&mut self) -> io::Result<(u16, u16)> {
+    pub fn get_cursor(&mut self) -> Result<(u16, u16), TerminalError<B>> {
         let Position { x, y } = self.get_cursor_position()?;
         Ok((x, y))
     }
 
     /// Sets the cursor position.
     #[deprecated = "use `set_cursor_position((x, y))` instead which takes `impl Into<Position>`"]
-    pub fn set_cursor(&mut self, x: u16, y: u16) -> io::Result<()> {
+    pub fn set_cursor(&mut self, x: u16, y: u16) -> Result<(), TerminalError<B>> {
         self.set_cursor_position(Position { x, y })
     }
 
     /// Gets the current cursor position.
     ///
     /// This is the position of the cursor after the last draw call.
-    pub fn get_cursor_position(&mut self) -> io::Result<Position> {
-        self.backend.get_cursor_position()
+    pub fn get_cursor_position(&mut self) -> Result<Position, TerminalError<B>> {
+        self.backend
+            .get_cursor_position()
+            .map_err(|e| TerminalError::BackendError(e))
     }
 
     /// Sets the cursor position.
-    pub fn set_cursor_position<P: Into<Position>>(&mut self, position: P) -> io::Result<()> {
+    pub fn set_cursor_position<P: Into<Position>>(
+        &mut self,
+        position: P,
+    ) -> Result<(), TerminalError<B>> {
         let position = position.into();
-        self.backend.set_cursor_position(position)?;
+        self.backend
+            .set_cursor_position(position)
+            .map_err(|e| TerminalError::BackendError(e))?;
         self.last_known_cursor_pos = position;
         Ok(())
     }
 
     /// Clear the terminal and force a full redraw on the next draw call.
-    pub fn clear(&mut self) -> io::Result<()> {
+    pub fn clear(&mut self) -> Result<(), TerminalError<B>> {
         match self.viewport {
-            Viewport::Fullscreen => self.backend.clear_region(ClearType::All)?,
+            Viewport::Fullscreen => self
+                .backend
+                .clear_region(ClearType::All)
+                .map_err(|e| TerminalError::BackendError(e))?,
             Viewport::Inline(_) => {
                 self.backend
-                    .set_cursor_position(self.viewport_area.as_position())?;
-                self.backend.clear_region(ClearType::AfterCursor)?;
+                    .set_cursor_position(self.viewport_area.as_position())
+                    .map_err(|e| TerminalError::BackendError(e))?;
+                self.backend
+                    .clear_region(ClearType::AfterCursor)
+                    .map_err(|e| TerminalError::BackendError(e))?;
             }
             Viewport::Fixed(_) => {
                 let area = self.viewport_area;
                 for y in area.top()..area.bottom() {
-                    self.backend.set_cursor_position(Position { x: 0, y })?;
-                    self.backend.clear_region(ClearType::AfterCursor)?;
+                    self.backend
+                        .set_cursor_position(Position { x: 0, y })
+                        .map_err(|e| TerminalError::BackendError(e))?;
+                    self.backend
+                        .clear_region(ClearType::AfterCursor)
+                        .map_err(|e| TerminalError::BackendError(e))?;
                 }
             }
         }
@@ -494,8 +537,10 @@ where
     }
 
     /// Queries the real size of the backend.
-    pub fn size(&self) -> io::Result<Size> {
-        self.backend.size()
+    pub fn size(&self) -> Result<Size, TerminalError<B>> {
+        self.backend
+            .size()
+            .map_err(|e| TerminalError::BackendError(e))
     }
 
     /// Insert some content before the current inline viewport. This has no effect when the
@@ -574,7 +619,7 @@ where
     ///     .render(buf.area, buf);
     /// });
     /// ```
-    pub fn insert_before<F>(&mut self, height: u16, draw_fn: F) -> io::Result<()>
+    pub fn insert_before<F>(&mut self, height: u16, draw_fn: F) -> Result<(), TerminalError<B>>
     where
         F: FnOnce(&mut Buffer),
     {
@@ -593,7 +638,7 @@ where
         &mut self,
         height: u16,
         draw_fn: impl FnOnce(&mut Buffer),
-    ) -> io::Result<()> {
+    ) -> Result<(), TerminalError<B>> {
         // The approach of this function is to first render all of the lines to insert into a
         // temporary buffer, and then to loop drawing chunks from the buffer to the screen. drawing
         // this buffer onto the screen.
@@ -694,7 +739,7 @@ where
         &mut self,
         mut height: u16,
         draw_fn: impl FnOnce(&mut Buffer),
-    ) -> io::Result<()> {
+    ) -> Result<(), TerminalError<B>> {
         // The approach of this function is to first render all of the lines to insert into a
         // temporary buffer, and then to loop drawing chunks from the buffer to the screen. drawing
         // this buffer onto the screen.
@@ -720,7 +765,9 @@ where
                     self.draw_lines_over_cleared(0, 1, buffer)?
                 };
                 first = false;
-                self.backend.scroll_region_up(0..1, 1)?;
+                self.backend
+                    .scroll_region_up(0..1, 1)
+                    .map_err(|e| TerminalError::BackendError(e))?;
             }
 
             // Redraw the top line of the viewport.
@@ -738,7 +785,8 @@ where
             if viewport_bottom < screen_bottom {
                 let to_draw = height.min(screen_bottom - viewport_bottom);
                 self.backend
-                    .scroll_region_down(viewport_top..viewport_bottom + to_draw, to_draw)?;
+                    .scroll_region_down(viewport_top..viewport_bottom + to_draw, to_draw)
+                    .map_err(|e| TerminalError::BackendError(e))?;
                 buffer = self.draw_lines_over_cleared(viewport_top, to_draw, buffer)?;
                 self.set_viewport_area(Rect {
                     y: viewport_top + to_draw,
@@ -751,7 +799,9 @@ where
         let viewport_top = self.viewport_area.top();
         while height > 0 {
             let to_draw = height.min(viewport_top);
-            self.backend.scroll_region_up(0..viewport_top, to_draw)?;
+            self.backend
+                .scroll_region_up(0..viewport_top, to_draw)
+                .map_err(|e| TerminalError::BackendError(e))?;
             buffer = self.draw_lines_over_cleared(viewport_top - to_draw, to_draw, buffer)?;
             height -= to_draw;
         }
@@ -766,7 +816,7 @@ where
         y_offset: u16,
         lines_to_draw: u16,
         cells: &'a [Cell],
-    ) -> io::Result<&'a [Cell]> {
+    ) -> Result<&'a [Cell], TerminalError<B>> {
         let width: usize = self.last_known_area.width.into();
         let (to_draw, remainder) = cells.split_at(width * lines_to_draw as usize);
         if lines_to_draw > 0 {
@@ -774,8 +824,12 @@ where
                 .iter()
                 .enumerate()
                 .map(|(i, c)| ((i % width) as u16, y_offset + (i / width) as u16, c));
-            self.backend.draw(iter)?;
-            self.backend.flush()?;
+            self.backend
+                .draw(iter)
+                .map_err(|e| TerminalError::BackendError(e))?;
+            self.backend
+                .flush()
+                .map_err(|e| TerminalError::BackendError(e))?;
         }
         Ok(remainder)
     }
@@ -789,7 +843,7 @@ where
         y_offset: u16,
         lines_to_draw: u16,
         cells: &'a [Cell],
-    ) -> io::Result<&'a [Cell]> {
+    ) -> Result<&'a [Cell], TerminalError<B>> {
         let width: usize = self.last_known_area.width.into();
         let (to_draw, remainder) = cells.split_at(width * lines_to_draw as usize);
         if lines_to_draw > 0 {
@@ -799,21 +853,27 @@ where
                 area,
                 content: to_draw.to_vec(),
             };
-            self.backend.draw(old.diff(&new).into_iter())?;
-            self.backend.flush()?;
+            self.backend
+                .draw(old.diff(&new).into_iter())
+                .map_err(|e| TerminalError::BackendError(e))?;
+            self.backend
+                .flush()
+                .map_err(|e| TerminalError::BackendError(e))?;
         }
         Ok(remainder)
     }
 
     /// Scroll the whole screen up by the given number of lines.
     #[cfg(not(feature = "scrolling-regions"))]
-    fn scroll_up(&mut self, lines_to_scroll: u16) -> io::Result<()> {
+    fn scroll_up(&mut self, lines_to_scroll: u16) -> Result<(), TerminalError<B>> {
         if lines_to_scroll > 0 {
             self.set_cursor_position(Position::new(
                 0,
                 self.last_known_area.height.saturating_sub(1),
             ))?;
-            self.backend.append_lines(lines_to_scroll)?;
+            self.backend
+                .append_lines(lines_to_scroll)
+                .map_err(|e| TerminalError::BackendError(e))?;
         }
         Ok(())
     }
@@ -824,8 +884,10 @@ fn compute_inline_size<B: Backend>(
     height: u16,
     size: Size,
     offset_in_previous_viewport: u16,
-) -> io::Result<(Rect, Position)> {
-    let pos = backend.get_cursor_position()?;
+) -> Result<(Rect, Position), TerminalError<B>> {
+    let pos = backend
+        .get_cursor_position()
+        .map_err(|e| TerminalError::BackendError(e))?;
     let mut row = pos.y;
 
     let max_height = size.height.min(height);
@@ -834,7 +896,9 @@ fn compute_inline_size<B: Backend>(
         .saturating_sub(offset_in_previous_viewport)
         .saturating_sub(1);
 
-    backend.append_lines(lines_after_cursor)?;
+    backend
+        .append_lines(lines_after_cursor)
+        .map_err(|e| TerminalError::BackendError(e))?;
 
     let available_lines = size.height.saturating_sub(row).saturating_sub(1);
     let missing_lines = lines_after_cursor.saturating_sub(available_lines);
