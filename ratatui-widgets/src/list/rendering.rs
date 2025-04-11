@@ -255,7 +255,9 @@ impl List<'_> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{borrow::ToOwned, vec, vec::Vec};
+    use alloc::borrow::ToOwned;
+    use alloc::vec;
+    use alloc::vec::Vec;
 
     use pretty_assertions::assert_eq;
     use ratatui_core::layout::{Alignment, Rect};

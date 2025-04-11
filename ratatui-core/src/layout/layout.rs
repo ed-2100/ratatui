@@ -1,32 +1,30 @@
+use alloc::format;
+#[cfg(feature = "std")]
+use alloc::rc::Rc;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::iter;
 use core::num::NonZeroUsize;
+#[cfg(feature = "std")]
+use std::thread_local;
 
+#[cfg(not(feature = "std"))]
+use critical_section::Mutex;
 use hashbrown::HashMap;
 use itertools::Itertools;
 use kasuari::WeightedRelation::{EQ, GE, LE};
 use kasuari::{AddConstraintError, Expression, Solver, Strength, Variable};
 use lru::LruCache;
+#[cfg(not(feature = "std"))]
+use once_cell::sync::Lazy;
+#[cfg(not(feature = "std"))]
+use portable_atomic_util::Arc;
 
 use self::strengths::{
     ALL_SEGMENT_GROW, FILL_GROW, GROW, LENGTH_SIZE_EQ, MAX_SIZE_EQ, MAX_SIZE_LE, MIN_SIZE_EQ,
     MIN_SIZE_GE, PERCENTAGE_SIZE_EQ, RATIO_SIZE_EQ, SPACER_SIZE_EQ, SPACE_GROW,
 };
 use crate::layout::{Constraint, Direction, Flex, Margin, Rect};
-
-#[cfg(feature = "std")]
-mod no_std_uses {
-    pub use alloc::rc::Rc;
-    pub use std::thread_local;
-}
-#[cfg(not(feature = "std"))]
-mod no_std_uses {
-    pub use critical_section::Mutex;
-    pub use once_cell::sync::Lazy;
-    pub use portable_atomic_util::Arc;
-}
-use no_std_uses::*;
 
 #[cfg(feature = "std")]
 type Rects = Rc<[Rect]>;
@@ -1045,20 +1043,21 @@ fn changes_to_rects(
 
 /// please leave this here as it's useful for debugging unit tests when we make any changes to
 /// layout code - we should replace this with tracing in the future.
-// #[allow(dead_code)]
-// fn debug_elements(elements: &[Element], changes: &HashMap<Variable, f64>) {
-//     let variables = format!(
-//         "{:?}",
-//         elements
-//             .iter()
-//             .map(|e| (
-//                 changes.get(&e.start).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
-//                 changes.get(&e.end).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
-//             ))
-//             .collect::<Vec<(f64, f64)>>()
-//     );
-//     dbg!(variables);
-// }
+#[allow(dead_code)]
+fn debug_elements(elements: &[Element], changes: &HashMap<Variable, f64>) {
+    let _variables = format!(
+        "{:?}",
+        elements
+            .iter()
+            .map(|e| (
+                changes.get(&e.start).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
+                changes.get(&e.end).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
+            ))
+            .collect::<Vec<(f64, f64)>>()
+    );
+    todo!("This function uses dbg, which is from std. This code needs to be refactored.")
+    // dbg!(variables);
+}
 
 /// A container used by the solver inside split
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]

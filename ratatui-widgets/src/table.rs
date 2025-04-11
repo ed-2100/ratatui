@@ -1,6 +1,7 @@
 //! The [`Table`] widget is used to display multiple rows and columns in a grid and allows selecting
 //! one or multiple cells.
-use alloc::{vec, vec::Vec};
+use alloc::vec;
+use alloc::vec::Vec;
 
 use itertools::Itertools;
 use ratatui_core::buffer::Buffer;
@@ -1037,7 +1038,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::ToString, vec};
+    use alloc::string::ToString;
+    use alloc::{format, vec};
 
     use ratatui_core::layout::Constraint::*;
     use ratatui_core::style::{Color, Modifier, Style, Stylize};

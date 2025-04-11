@@ -901,7 +901,8 @@ impl Styled for Block<'_> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, vec, vec::Vec};
+    use alloc::vec::Vec;
+    use alloc::{format, vec};
 
     use ratatui_core::layout::HorizontalAlignment;
     use ratatui_core::style::{Color, Modifier, Stylize};

@@ -136,7 +136,7 @@
 //!
 //! ```rust,no_run
 //! use core::error::Error;
-//! 
+//!
 //! use ratatui::widgets::Paragraph;
 //! use ratatui::Frame;
 //!

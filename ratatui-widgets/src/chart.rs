@@ -1156,7 +1156,8 @@ impl Styled for Chart<'_> {
 
 #[cfg(test)]
 mod tests {
-    use alloc::{format, string::ToString, vec};
+    use alloc::string::ToString;
+    use alloc::{format, vec};
 
     use ratatui_core::style::{Modifier, Stylize};
     use rstest::rstest;

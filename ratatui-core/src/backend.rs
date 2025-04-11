@@ -101,7 +101,6 @@
 //! [Backend Comparison]: https://ratatui.rs/concepts/backends/comparison/
 //! [Ratatui Website]: https://ratatui.rs
 use strum::{Display, EnumString};
-use thiserror::Error;
 
 use crate::buffer::Cell;
 use crate::layout::{Position, Size};
@@ -151,7 +150,7 @@ impl Error for core::convert::Infallible {
 }
 
 /// Represents the different kinds of errors that can occur in a backend.
-#[derive(Error, Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(thiserror::Error, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum ErrorKind {
     /// The clear type requested is not supported by the backend.

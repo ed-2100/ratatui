@@ -1,8 +1,6 @@
 //! The [`Sparkline`] widget is used to display a sparkline over one or more lines.
-use alloc::{
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use core::cmp::min;
 
 use ratatui_core::buffer::Buffer;

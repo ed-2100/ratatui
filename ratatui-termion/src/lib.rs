@@ -158,7 +158,7 @@ impl ratatui_core::backend::Error for TermionBackendError {
 
 impl<W> Backend for TermionBackend<W>
 where
-    W: Write + std::fmt::Debug,
+    W: Write,
 {
     type Error = TermionBackendError;
 

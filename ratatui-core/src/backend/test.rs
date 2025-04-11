@@ -6,10 +6,9 @@ use alloc::vec;
 use core::fmt::{self, Write};
 use core::iter;
 
-use thiserror::Error;
 use unicode_width::UnicodeWidthStr;
 
-use super::*;
+use super::{Error, ErrorKind};
 use crate::backend::{Backend, ClearType, WindowSize};
 use crate::buffer::{Buffer, Cell};
 use crate::layout::{Position, Rect, Size};
@@ -234,7 +233,7 @@ impl fmt::Display for TestBackend {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum TestBackendError {
     #[error("Clear type not supported.")]
     ClearTypeNotSupported,
@@ -243,7 +242,7 @@ pub enum TestBackendError {
 impl Error for TestBackendError {
     fn kind(&self) -> super::ErrorKind {
         match self {
-            TestBackendError::ClearTypeNotSupported => ErrorKind::ClearTypeNotSupported,
+            Self::ClearTypeNotSupported => ErrorKind::ClearTypeNotSupported,
         }
     }
 }

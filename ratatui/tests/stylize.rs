@@ -4,7 +4,8 @@ use ratatui::layout::Rect;
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::widgets::{BarChart, Block, Paragraph};
 use ratatui::Terminal;
-use ratatui_core::{backend::Backend, terminal::TerminalError};
+use ratatui_core::backend::Backend;
+use ratatui_core::terminal::TerminalError;
 
 #[test]
 fn barchart_can_be_stylized() {
