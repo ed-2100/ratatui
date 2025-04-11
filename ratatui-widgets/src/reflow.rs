@@ -1,5 +1,5 @@
 //! Internal module for reflowing text to fit into a certain width.
-use alloc::collections::VecDeque;
+use alloc::{collections::VecDeque, vec, vec::Vec};
 use core::mem;
 
 use ratatui_core::layout::Alignment;
@@ -351,6 +351,8 @@ fn trim_offset(src: &str, mut offset: usize) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{boxed::Box, string::String};
+
     use ratatui_core::style::Style;
     use ratatui_core::text::{Line, Text};
 

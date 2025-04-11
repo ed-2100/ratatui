@@ -12,7 +12,7 @@
 //! - [`Rectangle`]: A basic rectangle
 //!
 //! You can also implement your own custom [`Shape`]s.
-
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 use core::fmt;
 use core::iter::zip;
 

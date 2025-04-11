@@ -5,6 +5,7 @@
 //! In its simplest form, a `Block` is a [border](Borders) around another widget. It can have a
 //! [title](Block::title) and [padding](Block::padding).
 #![allow(deprecated)] // to avoid having to add `#[deprecated]` to every use of `Title`
+use alloc::vec::Vec;
 
 use itertools::Itertools;
 use ratatui_core::buffer::Buffer;
@@ -900,6 +901,8 @@ impl Styled for Block<'_> {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, vec, vec::Vec};
+
     use ratatui_core::layout::HorizontalAlignment;
     use ratatui_core::style::{Color, Modifier, Stylize};
     use rstest::rstest;

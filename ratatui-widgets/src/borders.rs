@@ -254,6 +254,8 @@ macro_rules! border {
 
 #[cfg(test)]
 mod tests {
+    use alloc::format;
+
     use super::*;
 
     #[test]

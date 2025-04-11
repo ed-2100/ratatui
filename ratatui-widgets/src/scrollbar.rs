@@ -636,6 +636,7 @@ impl ScrollbarOrientation {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{format, string::ToString};
     use core::str::FromStr;
 
     use ratatui_core::text::Text;
