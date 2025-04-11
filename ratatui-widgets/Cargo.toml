@@ -22,7 +22,9 @@ cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["all-widgets"]
+default = ["all-widgets", "std"]
+
+std = ["ratatui-core/std"]
 
 ## enables serialization and deserialization of style and color types using the [`serde`] crate.
 ## This is useful if you want to save themes to a file.
@@ -55,7 +57,7 @@ indoc.workspace = true
 instability.workspace = true
 itertools.workspace = true
 line-clipping = "0.2.1"
-ratatui-core = { workspace = true }
+ratatui-core = { workspace = true, default-features = false }
 serde = { workspace = true, optional = true }
 strum.workspace = true
 time = { version = "0.3.11", optional = true, features = ["local-offset"] }
