@@ -43,7 +43,7 @@
 #![warn(clippy::alloc_instead_of_core)]
 #![no_std]
 
-// #[cfg(test)]
+#[cfg(feature = "std")]
 extern crate std;
 
 extern crate alloc;

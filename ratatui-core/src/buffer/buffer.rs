@@ -641,9 +641,7 @@ impl fmt::Debug for Buffer {
 #[cfg(test)]
 mod tests {
     use alloc::format;
-    use alloc::string::ToString;
     use core::iter;
-    use std::{dbg, println};
 
     use itertools::Itertools;
     use rstest::{fixture, rstest};
@@ -655,7 +653,6 @@ mod tests {
     fn debug_empty_buffer() {
         let buffer = Buffer::empty(Rect::ZERO);
         let result = format!("{buffer:?}");
-        println!("{result}");
         let expected = "Buffer {\n    area: Rect { x: 0, y: 0, width: 0, height: 0 }\n}";
         assert_eq!(result, expected);
     }
@@ -665,7 +662,6 @@ mod tests {
     fn debug_grapheme_override() {
         let buffer = Buffer::with_lines(["a🦀b"]);
         let result = format!("{buffer:?}");
-        println!("{result}");
         let expected = indoc::indoc!(
             r#"
             Buffer {
@@ -695,7 +691,6 @@ mod tests {
                 .add_modifier(Modifier::BOLD),
         );
         let result = format!("{buffer:?}");
-        println!("{result}");
         #[cfg(feature = "underline-color")]
         let expected = indoc::indoc!(
             r#"
@@ -1249,24 +1244,6 @@ mod tests {
     // Prior to unicode-width 0.2, this was incorrectly detected as width 4 for some reason
     #[case::eye_speechbubble("👁️‍🗨️", "👁️‍🗨️xxxxx")]
     fn renders_emoji(#[case] input: &str, #[case] expected: &str) {
-        use unicode_width::UnicodeWidthChar;
-
-        dbg!(input);
-        dbg!(input.len());
-        dbg!(input
-            .graphemes(true)
-            .map(|symbol| (symbol, symbol.escape_unicode().to_string(), symbol.width()))
-            .collect::<Vec<_>>());
-        dbg!(input
-            .chars()
-            .map(|char| (
-                char,
-                char.escape_unicode().to_string(),
-                char.width(),
-                char.is_control()
-            ))
-            .collect::<Vec<_>>());
-
         let mut buffer = Buffer::filled(Rect::new(0, 0, 7, 1), Cell::new("x"));
         buffer.set_string(0, 0, input, Style::new());
 

@@ -1185,8 +1185,6 @@ mod tests {
     }
 
     mod widget {
-        use std::dbg;
-
         use unicode_segmentation::UnicodeSegmentation;
         use unicode_width::UnicodeWidthStr;
 
@@ -1489,7 +1487,6 @@ mod tests {
 
             let line = Line::from(vec![Span::raw(part); factor]).alignment(alignment);
 
-            dbg!(line.width());
             assert!(line.width() >= min_width);
 
             let mut buf = Buffer::empty(Rect::new(0, 0, 32, 1));
@@ -1513,7 +1510,6 @@ mod tests {
 
             let line = Line::from(vec![Span::raw(part.repeat(factor))]).alignment(alignment);
 
-            dbg!(line.width());
             assert!(line.width() >= min_width);
 
             let mut buf = Buffer::empty(Rect::new(0, 0, 32, 1));

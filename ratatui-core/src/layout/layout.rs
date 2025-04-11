@@ -1,10 +1,7 @@
-use alloc::format;
-use alloc::rc::Rc;
 use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::iter;
 use core::num::NonZeroUsize;
-use std::{dbg, thread_local};
 
 use hashbrown::HashMap;
 use itertools::Itertools;
@@ -18,7 +15,24 @@ use self::strengths::{
 };
 use crate::layout::{Constraint, Direction, Flex, Margin, Rect};
 
+#[cfg(feature = "std")]
+mod no_std_uses {
+    pub use alloc::rc::Rc;
+    pub use std::thread_local;
+}
+#[cfg(not(feature = "std"))]
+mod no_std_uses {
+    pub use critical_section::Mutex;
+    pub use once_cell::sync::Lazy;
+    pub use portable_atomic_util::Arc;
+}
+use no_std_uses::*;
+
+#[cfg(feature = "std")]
 type Rects = Rc<[Rect]>;
+#[cfg(not(feature = "std"))]
+type Rects = Arc<[Rect]>;
+
 type Segments = Rects;
 type Spacers = Rects;
 // The solution to a Layout solve contains two `Rects`, where `Rects` is effectively a `[Rect]`.
@@ -39,11 +53,18 @@ type Cache = LruCache<(Rect, Layout), (Segments, Spacers)>;
 // calculations.
 const FLOAT_PRECISION_MULTIPLIER: f64 = 100.0;
 
+#[cfg(feature = "std")]
 thread_local! {
     static LAYOUT_CACHE: RefCell<Cache> = RefCell::new(Cache::new(
         NonZeroUsize::new(Layout::DEFAULT_CACHE_SIZE).unwrap(),
     ));
 }
+#[cfg(not(feature = "std"))]
+static LAYOUT_CACHE: Lazy<Mutex<RefCell<Cache>>> = Lazy::new(|| {
+    Mutex::new(RefCell::new(Cache::new(
+        NonZeroUsize::new(Layout::DEFAULT_CACHE_SIZE).unwrap(),
+    )))
+});
 
 /// Represents the spacing between segments in a layout.
 ///
@@ -281,7 +302,12 @@ impl Layout {
     ///
     /// By default, the cache size is [`Self::DEFAULT_CACHE_SIZE`].
     pub fn init_cache(cache_size: NonZeroUsize) {
+        #[cfg(feature = "std")]
         LAYOUT_CACHE.with_borrow_mut(|c| c.resize(cache_size));
+        #[cfg(not(feature = "std"))]
+        critical_section::with(|cs| {
+            LAYOUT_CACHE.borrow_ref_mut(cs).resize(cache_size);
+        })
     }
 
     /// Set the direction of the layout.
@@ -653,11 +679,21 @@ impl Layout {
     /// );
     /// ```
     pub fn split_with_spacers(&self, area: Rect) -> (Segments, Spacers) {
-        LAYOUT_CACHE.with_borrow_mut(|c| {
+        let split = || self.try_split(area).expect("failed to split");
+
+        #[cfg(feature = "std")]
+        return LAYOUT_CACHE.with_borrow_mut(|c| {
             let key = (area, self.clone());
-            c.get_or_insert(key, || self.try_split(area).expect("failed to split"))
+            c.get_or_insert(key, split).clone()
+        });
+        #[cfg(not(feature = "std"))]
+        return critical_section::with(|cs| {
+            let key = (area, self.clone());
+            LAYOUT_CACHE
+                .borrow_ref_mut(cs)
+                .get_or_insert(key, split)
                 .clone()
-        })
+        });
     }
 
     fn try_split(&self, area: Rect) -> Result<(Segments, Spacers), AddConstraintError> {
@@ -1009,20 +1045,20 @@ fn changes_to_rects(
 
 /// please leave this here as it's useful for debugging unit tests when we make any changes to
 /// layout code - we should replace this with tracing in the future.
-#[allow(dead_code)]
-fn debug_elements(elements: &[Element], changes: &HashMap<Variable, f64>) {
-    let variables = format!(
-        "{:?}",
-        elements
-            .iter()
-            .map(|e| (
-                changes.get(&e.start).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
-                changes.get(&e.end).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
-            ))
-            .collect::<Vec<(f64, f64)>>()
-    );
-    dbg!(variables);
-}
+// #[allow(dead_code)]
+// fn debug_elements(elements: &[Element], changes: &HashMap<Variable, f64>) {
+//     let variables = format!(
+//         "{:?}",
+//         elements
+//             .iter()
+//             .map(|e| (
+//                 changes.get(&e.start).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
+//                 changes.get(&e.end).unwrap_or(&0.0) / FLOAT_PRECISION_MULTIPLIER,
+//             ))
+//             .collect::<Vec<(f64, f64)>>()
+//     );
+//     dbg!(variables);
+// }
 
 /// A container used by the solver inside split
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -1201,14 +1237,26 @@ mod tests {
 
     #[test]
     fn cache_size() {
-        LAYOUT_CACHE.with_borrow(|c| {
-            assert_eq!(c.cap().get(), Layout::DEFAULT_CACHE_SIZE);
-        });
+        #[cfg(feature = "std")]
+        {
+            LAYOUT_CACHE.with_borrow(|c| {
+                assert_eq!(c.cap().get(), Layout::DEFAULT_CACHE_SIZE);
+            });
 
-        Layout::init_cache(NonZeroUsize::new(10).unwrap());
-        LAYOUT_CACHE.with_borrow(|c| {
-            assert_eq!(c.cap().get(), 10);
-        });
+            Layout::init_cache(NonZeroUsize::new(10).unwrap());
+            LAYOUT_CACHE.with_borrow(|c| {
+                assert_eq!(c.cap().get(), 10);
+            });
+        }
+        #[cfg(not(feature = "std"))]
+        critical_section::with(|cs| {
+            assert_eq!(
+                LAYOUT_CACHE.borrow_ref(cs).cap().get(),
+                Layout::DEFAULT_CACHE_SIZE
+            );
+            Layout::init_cache(NonZeroUsize::new(10).unwrap());
+            assert_eq!(LAYOUT_CACHE.borrow_ref(cs).cap().get(), 10);
+        })
     }
 
     #[test]

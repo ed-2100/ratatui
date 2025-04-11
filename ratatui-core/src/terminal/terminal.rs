@@ -1,5 +1,4 @@
 use alloc::boxed::Box;
-use std::{eprintln, io};
 
 use crate::backend::{Backend, ClearType};
 use crate::buffer::{Buffer, Cell};
@@ -92,9 +91,7 @@ where
     fn drop(&mut self) {
         // Attempt to restore the cursor state
         if self.hidden_cursor {
-            if let Err(err) = self.show_cursor() {
-                eprintln!("Failed to show the cursor: {err}");
-            }
+            self.show_cursor().ok();
         }
     }
 }
@@ -323,7 +320,7 @@ where
     {
         self.try_draw(|frame| {
             render_callback(frame);
-            io::Result::Ok(())
+            Ok::<(), &(dyn core::error::Error + Sync)>(())
         })
     }
 
