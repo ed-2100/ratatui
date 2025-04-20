@@ -238,10 +238,6 @@ where
         execute!(self.writer, MoveTo(x, y))
     }
 
-    fn clear(&mut self) -> io::Result<()> {
-        self.clear_region(ClearType::All)
-    }
-
     fn clear_region(&mut self, clear_type: ClearType) -> io::Result<()> {
         execute!(
             self.writer,

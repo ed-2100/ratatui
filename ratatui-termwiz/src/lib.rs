@@ -216,15 +216,13 @@ impl Backend for TermwizBackend {
         Ok(())
     }
 
-    fn clear(&mut self) -> io::Result<()> {
-        self.buffered_terminal
-            .add_change(Change::ClearScreen(termwiz::color::ColorAttribute::Default));
-        Ok(())
-    }
-
     fn clear_region(&mut self, clear_type: ClearType) -> io::Result<()> {
         match clear_type {
-            ClearType::All => self.clear(),
+            ClearType::All => {
+                self.buffered_terminal
+                    .add_change(Change::ClearScreen(termwiz::color::ColorAttribute::Default));
+                Ok(())
+            }
             ClearType::AfterCursor
             | ClearType::BeforeCursor
             | ClearType::CurrentLine

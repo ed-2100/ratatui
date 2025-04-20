@@ -140,10 +140,6 @@ impl<W> Backend for TermionBackend<W>
 where
     W: Write,
 {
-    fn clear(&mut self) -> io::Result<()> {
-        self.clear_region(ClearType::All)
-    }
-
     fn clear_region(&mut self, clear_type: ClearType) -> io::Result<()> {
         match clear_type {
             ClearType::All => write!(self.writer, "{}", termion::clear::All)?,
