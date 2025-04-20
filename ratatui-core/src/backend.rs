@@ -247,7 +247,9 @@ pub trait Backend {
     /// backend.clear()?;
     /// # std::io::Result::Ok(())
     /// ```
-    fn clear(&mut self) -> io::Result<()>;
+    fn clear(&mut self) -> io::Result<()> {
+        self.clear_region(ClearType::All)
+    }
 
     /// Clears a specific region of the terminal specified by the [`ClearType`] parameter
     ///
