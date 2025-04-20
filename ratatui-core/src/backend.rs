@@ -100,7 +100,6 @@
 //! [Examples]: https://github.com/ratatui/ratatui/tree/main/ratatui/examples/README.md
 //! [Backend Comparison]: https://ratatui.rs/concepts/backends/comparison/
 //! [Ratatui Website]: https://ratatui.rs
-use alloc::format;
 use std::io;
 
 use strum::{Display, EnumString};
@@ -273,17 +272,7 @@ pub trait Backend {
     /// return an error if the `clear_type` is not supported by the backend.
     ///
     /// [`clear`]: Self::clear
-    fn clear_region(&mut self, clear_type: ClearType) -> io::Result<()> {
-        match clear_type {
-            ClearType::All => self.clear(),
-            ClearType::AfterCursor
-            | ClearType::BeforeCursor
-            | ClearType::CurrentLine
-            | ClearType::UntilNewLine => Err(io::Error::other(format!(
-                "clear_type [{clear_type:?}] not supported with this backend"
-            ))),
-        }
-    }
+    fn clear_region(&mut self, clear_type: ClearType) -> io::Result<()>;
 
     /// Get the size of the terminal screen in columns/rows as a [`Size`].
     ///

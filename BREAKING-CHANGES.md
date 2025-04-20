@@ -16,6 +16,7 @@ This is a quick summary of the sections below:
   - `List::highlight_symbol` now accepts `Into<Line>` instead of `&str`
   - 'layout::Alignment' is renamed to 'layout::HorizontalAlignment'
   - The MSRV is now 1.81.0
+  - `clear_region` is now required for `Backend` impls
 - [v0.29.0](#v0290)
   - `Sparkline::data` takes `IntoIterator<Item = SparklineBar>` instead of `&[u64]` and is no longer const
   - Removed public fields from `Rect` iterators
